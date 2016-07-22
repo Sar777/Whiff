@@ -407,9 +407,74 @@ namespace Trampolines
 
     namespace Legion
     {
-        bool Init() { return true; }
+        int __fastcall NetClient_ProcessMessage(void* thisPTR, void* dummy, void* param1, void* param2, CDataStore* dataStore, void* connectionId)
+        {
+            recvmtx.lock();
+            PacketInfo packetInfo(SMSG, (int)connectionId, 2, dataStore);
+            sSniffer->DumpPacket(packetInfo);
+            int retCode = sDetourMgr->GetDetour<decltype(&NetClient_ProcessMessage)>(HOOK_PROCESSMESSAGE)->GetOriginalFunction()(thisPTR, dummy, param1, param2, dataStore, connectionId);
+            recvmtx.unlock();
+            return retCode;
+        }
 
-        std::string GetLocale() { return std::string(); }
+        int __fastcall NetClient_Send2(void* thisPTR, void* dummy, CDataStore* dataStore, int connectionId)
+        {
+            sendmtx.lock();
+            PacketInfo packetInfo(CMSG, connectionId, 6, dataStore);
+            sSniffer->DumpPacket(packetInfo);
+            int retCode = sDetourMgr->GetDetour<decltype(&NetClient_Send2)>(HOOK_SEND2)->GetOriginalFunction()(thisPTR, dummy, dataStore, connectionId);
+            sendmtx.unlock();
+            return retCode;
+        }
+
+        typedef int(*GetCurrentWowLocaleFn)(void);
+        int GetWoWLocaleEnum()
+        {
+            ClientAddresses::Addresses const* addresses = sSniffer->GetAddresses();
+            if (!addresses->GetCurrentWowLocale)
+                return 0;
+
+            return GetCurrentWowLocaleFn(EXE_REBASE(addresses->GetCurrentWowLocale))();
+        }
+
+        typedef char*(__cdecl *GetLocaleNameFromWowEnumFn)(int);
+        std::string GetLocale()
+        {
+            ClientAddresses::Addresses const* addresses = sSniffer->GetAddresses();
+            if (addresses->Locale)
+                return sHexSearcher->ReadStringR(addresses->Locale, 4);
+
+            if (!addresses->GetLocaleNameFromWowEnum)
+                return nullptr;
+
+            return std::string(GetLocaleNameFromWowEnumFn(EXE_REBASE(addresses->GetLocaleNameFromWowEnum))(GetWoWLocaleEnum()));
+        }
+
+        bool InitProcessMessage()
+        {
+            ClientAddresses::Addresses const* addresses = sSniffer->GetAddresses();
+            if (!sDetourMgr->CreateDetour<decltype(&NetClient_ProcessMessage)>(HOOK_PROCESSMESSAGE, addresses->NetClient_ProcessMessage, &NetClient_ProcessMessage))
+                return false;
+
+            return true;
+        }
+
+        bool InitSend2()
+        {
+            ClientAddresses::Addresses const* addresses = sSniffer->GetAddresses();
+            return sDetourMgr->CreateDetour<decltype(&NetClient_Send2)>(HOOK_SEND2, addresses->NetClient_Send2, &NetClient_Send2);
+        }
+
+        bool Init()
+        {
+            if (!InitProcessMessage())
+                return false;
+
+            if (!InitSend2())
+                return false;
+
+            return true;
+        }
     }
 
     std::string GetLocale()

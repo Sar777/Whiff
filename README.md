@@ -28,6 +28,7 @@ WowPacketParser
 ### Supported Client Builds
  - All common pre-WoD builds
  - All WoD builds (PTR and Live)
+ - Legion is supporting but it is under developing || 7.0.3[22248, 22267, 22277, 22280, 22289]
 
 ### WARNING
  Injection writes into WoW's memory at runtime. So Warden (Blizzard's anticheat)

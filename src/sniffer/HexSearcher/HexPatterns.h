@@ -241,10 +241,42 @@ namespace HexPatterns
 
     namespace Legion
     {
+        namespace x86
+        {
+            static const std::vector<unsigned char> NetClient_ProcessMessage() { return{ 0x55, 0x8B, 0xEC, 0x51, 0xFF, 0x05, 0x00, 0x00, 0x00, 0x00, 0x8D, 0x45 }; }
+
+            static const std::vector<unsigned char> NetClient_Send2() { return{ 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x00, 0x53, 0x56, 0x8B, 0xF1, 0x57, 0x8D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8B, 0xCB, 0xE8, 0x00, 0x00, 0x00, 0xFF, 0x83, 0xBE }; }
+
+            static const std::vector<unsigned char> GetCurrentWowLocale() { return{ 0xA1, 0x00, 0x00, 0x00, 0x00, 0xC3, 0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x08, 0x8B, 0x04, 0x85, 0x00, 0x00, 0x00, 0x00, 0x5D, 0xC3, 0x55, 0x8B }; }
+
+            static const std::vector<unsigned char> GetLocaleNameFromWowEnum() { return{ 0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x08, 0x8B, 0x04, 0x85, 0x00, 0x00, 0x00, 0x00, 0x5D, 0xC3, 0x55, 0x8B, 0xEC, 0x8B, 0x55, 0x08, 0x85, 0xD2, 0x74, 0x34, 0x8A, 0x02, 0x84, 0xC0, 0x74, 0x2E, 0x0F, 0xBE, 0xC8, 0x0F, 0xBE, 0x42, 0x01, 0xC1, 0xE1, 0x08, 0x0B, 0xC8, 0x0F, 0xBE, 0x42, 0x03, 0xC1, 0xE1, 0x10, 0x0B, 0xC8, 0x0F, 0xBE, 0x42, 0x02, 0x83, 0xE0, 0xDF, 0x81, 0xE1, 0xDF, 0xDF, 0xFF, 0xFF, 0x0D, 0x00, 0x20, 0x20, 0x00, 0xC1, 0xE0, 0x08, 0x0B, 0xC8, 0xEB, 0x02 }; }
+
+            void Find(Addresses* addresses)
+            {
+                HexFindResult processMessage(sHexSearcher->FindOffsets(NetClient_ProcessMessage(), 0, addresses->NetClient_ProcessMessage, "NetClient::ProcessMessage"));
+                if (processMessage.Err == ERR_OK)
+                    printf("Found %s at 0x%X\n", processMessage.Name, addresses->NetClient_ProcessMessage);
+
+                HexFindResult send2(sHexSearcher->FindOffsets(NetClient_Send2(), 0, addresses->NetClient_Send2, "NetClient::Send2"));
+                if (send2.Err == ERR_OK)
+                    printf("Found %s at 0x%X\n", send2.Name, addresses->NetClient_Send2);
+
+                HexFindResult currentWowLocale(sHexSearcher->FindOffsets(GetCurrentWowLocale(), 0, addresses->GetCurrentWowLocale, "GetCurrentWowLocale"));
+                if (currentWowLocale.Err == ERR_OK)
+                    printf("Found %s at 0x%X\n", currentWowLocale.Name, addresses->GetCurrentWowLocale);
+
+                HexFindResult localeNameFromWowEnum(sHexSearcher->FindOffsets(GetLocaleNameFromWowEnum(), 0, addresses->GetLocaleNameFromWowEnum, "GetLocaleNameFromWowEnum"));
+                if (localeNameFromWowEnum.Err == ERR_OK)
+                    printf("Found %s at 0x%X\n", localeNameFromWowEnum.Name, addresses->GetLocaleNameFromWowEnum);
+            }
+        }
+
         void Find(Addresses* addresses)
         {
             if (GetExpansion(sSniffer->GetBuild()) != EXPANSION_LEGION)
                 return;
+
+            x86::Find(addresses);
         }
     }
 
